@@ -112,7 +112,7 @@ class Mainwindow:
             [open_sec],
             [collapse(section, "-SEC-", self.open)],
         ]
-        self.window = sg.Window("きんたいんV", layout)
+        self.window = sg.Window("auto_kkjh", layout)
 
     def show_window(self):
         return self.window.read(timeout=2000, timeout_key="-TIMEOUT-")
@@ -180,7 +180,7 @@ class SettingWindow:
                 sg.Button("キャンセル", size=button_size, pad=button_pad),
             ],
         ]
-        window = sg.Window("きんたいんV設定", layout)
+        window = sg.Window("auto_kkjh設定", layout)
         event, values = window.read()
         window.close()
         if event == sg.WINDOW_CLOSED or event == "キャンセル":
