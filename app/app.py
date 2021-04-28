@@ -1,64 +1,116 @@
 import calendar
 import datetime
-import sys
+import json
 import subprocess
+import sys
+import typing as tp
+from dataclasses import dataclass
 from json import dump as jsondump
 from json import load as jsonload
-import json
 from pathlib import Path
 
 import openpyxl
 import PySimpleGUI as sg
 
 
+def abstractPath(relativePath):
+    if getattr(sys, "frozen", False):
+        basedir = Path(sys.excutable).parent
+    else:
+        basedir = Path(__file__).parent
+    return Path(basedir) / relativePath
+
+
+UP = "▲"
+DOWN = "▼"
+SETTING_FILE = abstractPath("../user_setting.cfg")
+EXCEL_TEMPLATE_FILE = abstractPath("template/template.xlsx")
+DEFAULT_SETTING = {
+    "faculty": "自然科学研究科数理物質専攻",
+    "studentID": "",
+    "userName": "",
+    "roomNumber": "",
+    "excelFileLocation": "user_setting.cfg",
+}
+
+
+@dataclass
+class UserSetting:
+    faculty: str
+    studentID: str
+    userName: str
+    roomNumber: str
+    excelFileLocation: str
+
+    def save_to_json(self, dst: Path):
+        with open(dst, "w") as f:
+            jsondump(self.asdict(), f)
+
+    def load_from_json(self, dst: Path = Path("")):
+        try:
+            with open(dst, "r") as f:
+                userSettingDict = jsonload(f)
+        except FileNotFoundError:
+            userSettingDict = DEFAULT_SETTING
+        except json.decoder.JSONDecodeError:
+            dst.unlink()
+            userSettingDict = DEFAULT_SETTING
+        except Exception as e:
+            print(1, e)
+
+        try:
+            userSetting = UserSetting(**userSettingDict)
+        except Exception as e:
+            print(2, e)
+        return userSetting
+
+
 class AttendanceRecord:
-    def year(self):
-        return datetime.date.today().year
+    def __init__(self, userSetting: tp.Type[UserSetting]):
+        self.userSetting = userSetting
 
-    def reiwa_year(self):
-        return self.year() - 2018
+    def excelFileName(self, userName: str):
+        today = datetime.date.today()
+        return f"研究活動状況表(R{today.year-2018}.{today.month})_{userName}.xlsx"
 
-    def month(self):
-        return datetime.date.today().month
-
-    def day(self):
-        return datetime.date.today().day
-
-    def hour(self):
-        return datetime.datetime.now().hour
-
-    def minute(self):
-        return datetime.datetime.now().minute
-
-    def xlname(self, username):
-        return f"研究活動状況表(R{self.reiwa_year()}.{self.month()})_{username}.xlsx"
-
-    def save_record(self, usersetting):
-        print(f"set faculty => {usersetting.faculty}")
-        print(f"set studentID => {usersetting.studentID}")
-        print(f"set username => {usersetting.username}")
-        self.sheet["G7"] = usersetting.faculty
-        self.sheet["G8"] = usersetting.studentID
-        self.sheet["G9"] = usersetting.username
-        self.wb.save(self.xlname(usersetting.username))
-
-    def generate_wb_from_template(self):
-        wb = openpyxl.load_workbook(EXCEL_TEMPLATE_FILE)
-        sheet = wb.active
-        sheet.title = f"{self.month()}月"
-        sheet["A2"] = f"令和{self.reiwa_year()}年{self.month()}月　研究活動状況表（学生用）"
-        num_day = calendar.monthrange(self.year(), self.month())[1]
+    def newExcelFromTemplate(self) -> openpyxl.workbook:
+        today = datetime.date.today()
+        workbook = openpyxl.load_workbook(EXCEL_TEMPLATE_FILE)
+        sheet = workbook.active
+        sheet.title = f"{today.month}月"
+        sheet["A2"] = f"令和{today.year-2018}年{today.month}月　研究活動状況表（学生用）"
+        num_day = calendar.monthrange(today.year, today.month)[1]
         for i in range(num_day):
             cell = f"A{i+16}"
-            ymd = datetime.date(self.year(), self.month(), i + 1)
+            day = i + 1
+            ymd = datetime.date(today.year, today.month, day)
             sheet[cell] = ymd
             sheet[cell].number_format = "m月d日"
-        return wb
+        return workbook
 
-    def stamp_roomnumber(self, roomnumber):
-        cell = f"H{self.day()+15}"
-        print(f"set roomnumber => cell: {cell} roomnumber: {roomnumber}")
-        self.sheet[cell] = roomnumber
+    def getExcel(self) -> openpyxl.workbook:
+        loc = self.userSetting.excelFileLocation
+        target = Path(loc) / self.excelFileName()
+        if target.is_file():
+            workbook = openpyxl.load_workbook(target)
+        else:
+            workbook = self.newExcelFromTemplate()
+        return workbook
+
+    def saveExcel(self, workbook: openpyxl.workbook):
+        loc = self.userSetting.excelFileLocation
+        target = Path(loc) / self.excelFileName()
+        workbook.save(target)
+
+    def stamp_roomNumber(self):
+        workbook = self.getExcel()
+        sheet = workbook.active
+        dt_now = datetime.datetime.now()
+        cell = f"H{dt_now.day+15}"
+        print(
+            f"set roomNumber => cell: {cell} roomNumber: {self.userSetting.roomNumber}"
+        )
+        sheet[cell] = self.userSetting.roomNumber
 
     def stamp_entry_time(self):
         cell = f"C{15+self.day()}"
@@ -124,7 +176,6 @@ class Mainwindow:
         if entry_time == None and exit_time == None:
             update_text = "おはよう"
         else:
-            date = datetime.date.today()
             if entry_time:
                 today_time = datetime.datetime.now() - entry_time
                 snt = "入室"
@@ -144,7 +195,7 @@ class Mainwindow:
         self.window["-EXIT_TEXT-"].update(update_text)
 
     def update_user_data(self, us):
-        update_text = f"名前: {us.username}\n学籍番号: {us.studentID}\n所属: {us.faculty}\n部屋番号 {us.roomnumber}"
+        update_text = f"名前: {us.userName}\n学籍番号: {us.studentID}\n所属: {us.faculty}\n部屋番号 {us.roomNumber}"
         print(update_text)
         self.window["-USER_DATA_TEXT-"].update(update_text)
 
@@ -167,11 +218,11 @@ class SettingWindow:
             ],
             [
                 sg.Text("名前", size=text_size, pad=text_pad),
-                sg.Input(usersetting.username, key="username"),
+                sg.Input(usersetting.userName, key="userName"),
             ],
             [
                 sg.Text("部屋番号", size=text_size, pad=text_pad),
-                sg.Input(usersetting.roomnumber, key="roomnumber"),
+                sg.Input(usersetting.roomNumber, key="roomNumber"),
             ],
             [
                 sg.Button("OK", size=button_size, pad=button_pad),
@@ -205,22 +256,6 @@ class ManualWindow:
         window.close()
 
 
-class UserSetting:
-    def __init__(self, faculty, studentID, username, roomnumber):
-        self.faculty = faculty
-        self.studentID = studentID
-        self.username = username
-        self.roomnumber = roomnumber
-
-    def to_json(self):
-        return {
-            "faculty": self.faculty,
-            "studentID": self.studentID,
-            "username": self.username,
-            "roomnumber": self.roomnumber,
-        }
-
-
 def collapse(layout, key, visible):
     return sg.pin(sg.Column(layout, key=key, visible=visible))
 
@@ -245,34 +280,14 @@ def load_setting(setting_file):
     return UserSetting(**usersetting)
 
 
-def load_excel(username):
+def load_excel(userName):
     an = AttendanceRecord()
-    if Path(an.xlname(username)).is_file():
-        an.wb = openpyxl.load_workbook(an.xlname(username))
+    if Path(an.excelFileName(userName)).is_file():
+        an.workbook = openpyxl.load_workbook(an.excelFileName(userName))
     else:
-        an.wb = an.generate_wb_from_template()
-    an.sheet = an.wb.active
+        an.workbook = an.newExcelFromTemplate()
+    an.sheet = an.workbook.active
     return an
-
-
-def abstractPath(relativePath):
-    if getattr(sys, "frozen", False):
-        basedir = Path(sys.excutable).parent
-    else:
-        basedir = Path(__file__).parent
-    return Path(basedir) / relativePath
-
-
-UP = "▲"
-DOWN = "▼"
-SETTING_FILE = abstractPath("../user_setting.cfg")
-EXCEL_TEMPLATE_FILE = abstractPath("template/template.xlsx")
-DEFAULT_SETTING = {
-    "faculty": "自然科学研究科数理物質専攻",
-    "studentID": "",
-    "username": "",
-    "roomnumber": "",
-}
 
 
 def main():
@@ -282,7 +297,7 @@ def main():
     usersetting = load_setting(SETTING_FILE)
     if not Path(SETTING_FILE).is_file():
         usersetting = sw.show_window(usersetting)
-    ar = load_excel(usersetting.username)
+    ar = load_excel(usersetting.userName)
 
     while True:
         event, values = mw.show_window()
@@ -306,9 +321,11 @@ def main():
         if event == "設定":
             usersetting = sw.show_window(usersetting)
             mw.update_user_data(usersetting)
-            ar = load_excel(usersetting.username)
+            ar = load_excel(usersetting.userName)
         if event == "Excelで開く":
-            subprocess.Popen(["start", ar.xlname(usersetting.username)], shell=True)
+            subprocess.Popen(
+                ["start", ar.excelFileName(usersetting.userName)], shell=True
+            )
             break
         if event == "-TIMEOUT-":
             mw.update_entry_time(ar.today_entry_time())
