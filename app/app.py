@@ -46,7 +46,8 @@ class UserSetting:
         with open(dst, "w") as f:
             jsondump(self.asdict(), f)
 
-    def load_from_json(self, dst: Path = Path("")):
+    @staticmethod
+    def load_from_json(dst: Path = Path("")):
         try:
             with open(dst, "r") as f:
                 userSettingDict = jsonload(f)
@@ -66,12 +67,15 @@ class UserSetting:
 
 
 class AttendanceRecord:
-    def __init__(self, userSetting: tp.Type[UserSetting]):
-        self.userSetting = userSetting
-
-    def excelFileName(self, userName: str):
+    @staticmethod
+    def excelFileName():
         today = datetime.date.today()
+        userName = UserSetting().load_from_json().userName
         return f"研究活動状況表(R{today.year-2018}.{today.month})_{userName}.xlsx"
+    
+    def excelPath(self):
+        loc = UserSetting.load_from_json().excelFileLocation
+        return Path(loc) / self.excelFileName()
 
     def newExcelFromTemplate(self) -> openpyxl.workbook:
         today = datetime.date.today()
@@ -89,8 +93,7 @@ class AttendanceRecord:
         return workbook
 
     def getExcel(self) -> openpyxl.workbook:
-        loc = self.userSetting.excelFileLocation
-        target = Path(loc) / self.excelFileName()
+        target = self.excelPath()
         if target.is_file():
             workbook = openpyxl.load_workbook(target)
         else:
@@ -98,39 +101,49 @@ class AttendanceRecord:
         return workbook
 
     def saveExcel(self, workbook: openpyxl.workbook):
-        loc = self.userSetting.excelFileLocation
-        target = Path(loc) / self.excelFileName()
-        workbook.save(target)
+        workbook.save(self.excelPath())
 
     def stamp_roomNumber(self):
         workbook = self.getExcel()
         sheet = workbook.active
         dt_now = datetime.datetime.now()
         cell = f"H{dt_now.day+15}"
-        print(
-            f"set roomNumber => cell: {cell} roomNumber: {self.userSetting.roomNumber}"
-        )
-        sheet[cell] = self.userSetting.roomNumber
+        newVal = self.userSetting.roomNumber
+        print(f"set roomNumber => cell: {cell} roomNumber: {newVal}")
+        sheet[cell] = newVal
+        self.saveExcel(workbook)
 
     def stamp_entry_time(self):
-        cell = f"C{15+self.day()}"
-        time = datetime.datetime.now().time()
-        print(f"stamp entry_time => cell:{cell} time:{time}")
-        self.sheet[cell] = time
+        workbook = self.getExcel()
+        sheet = workbook.active
+        dt_now = datetime.datetime.now()
+        cell = f"C{dt_now.day+15}"
+        val = dt_now.time()
+        print(f"stamp entry_time => cell:{cell} time:{val}")
+        sheet[cell] = val
+        self.saveExcel(workbook)
 
     def stamp_exit_time(self):
-        cell = f"E{15+self.day()}"
-        time = datetime.datetime.now().time()
-        print(f"stamp exit_time => cell:{cell} time:{time}")
-        self.sheet[cell] = time
+        workbook = self.getExcel()
+        sheet = workbook.active
+        dt_now = datetime.datetime.now()
+        cell = f"E{dt_now.day+15}"
+        val = dt_now.time()
+        print(f"stamp exit_time => cell:{cell} time:{val}")
+        sheet[cell] = val
+        self.saveExcel(workbook)
 
     def today_entry_time(self):
-        cell = self.sheet[f"C{15+self.day()}"].value
-        return datetime.datetime.combine(datetime.date.today(), cell) if cell else None
+        sheet = self.getExcel().active
+        dt_now = datetime.datetime.now()
+        time = sheet[f"C{dt_now.day+15}"].value
+        return datetime.datetime.combine(dt_now.day(), time) if time else None
 
     def today_exit_time(self):
-        cell = self.sheet[f"E{15+self.day()}"].value
-        return datetime.datetime.combine(datetime.date.today(), cell) if cell else None
+        sheet = self.getExcel().active
+        dt_now = datetime.datetime.now()
+        time = sheet[f"E{dt_now.day+15}"].value
+        return datetime.datetime.combine(dt_now.day(), time) if time else None
 
 
 class Mainwindow:
@@ -201,7 +214,7 @@ class Mainwindow:
 
 
 class SettingWindow:
-    def show_window(self, usersetting):
+    def show_window(self, usersetting) -> tp.Type[UserSetting]:
         text_size = (15, 1)
         text_pad = ((10, 10), (10, 10))
         button_size = (10, 1)
@@ -266,7 +279,7 @@ def get_h_m_s(td):
     return h, m, s
 
 
-def load_setting(setting_file):
+def load_setting(setting_file) -> tp.Type[UserSetting]:
     setting_filepath = Path(setting_file)
     if setting_filepath.is_file():
         try:
@@ -280,24 +293,14 @@ def load_setting(setting_file):
     return UserSetting(**usersetting)
 
 
-def load_excel(userName):
-    an = AttendanceRecord()
-    if Path(an.excelFileName(userName)).is_file():
-        an.workbook = openpyxl.load_workbook(an.excelFileName(userName))
-    else:
-        an.workbook = an.newExcelFromTemplate()
-    an.sheet = an.workbook.active
-    return an
-
-
 def main():
     mw = Mainwindow()
     sw = SettingWindow()
     manw = ManualWindow()
-    usersetting = load_setting(SETTING_FILE)
     if not Path(SETTING_FILE).is_file():
-        usersetting = sw.show_window(usersetting)
-    ar = load_excel(usersetting.userName)
+        usersetting = sw.show_window(UserSetting.load_from_json())
+        usersetting.save_to_json()
+    ar = AttendanceRecord(UserSetting.load_from_json())
 
     while True:
         event, values = mw.show_window()
@@ -319,9 +322,9 @@ def main():
             mw.update_exit_time(ar.today_exit_time())
             mw.time_update(ar.today_entry_time(), ar.today_exit_time())
         if event == "設定":
-            usersetting = sw.show_window(usersetting)
-            mw.update_user_data(usersetting)
-            ar = load_excel(usersetting.userName)
+            usersetting = sw.show_window(UserSetting.load_from_json())
+            mw.update_user_data()
+            usersetting.save_to_json(SETTING_FILE)
         if event == "Excelで開く":
             subprocess.Popen(
                 ["start", ar.excelFileName(usersetting.userName)], shell=True
