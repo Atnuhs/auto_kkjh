@@ -1,6 +1,5 @@
 import calendar
 import datetime
-import os
 import sys
 import subprocess
 from json import dump as jsondump
@@ -10,7 +9,6 @@ from pathlib import Path
 
 import openpyxl
 import PySimpleGUI as sg
-from openpyxl.styles import Font
 
 
 class AttendanceRecord:
