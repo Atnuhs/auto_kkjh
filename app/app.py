@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 import typing as tp
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from json import dump as jsondump
 from json import load as jsonload
 from pathlib import Path
@@ -23,14 +23,14 @@ def abstractPath(relativePath):
 
 UP = "▲"
 DOWN = "▼"
-SETTING_FILE = abstractPath("../user_setting.cfg")
-EXCEL_TEMPLATE_FILE = abstractPath("template/template.xlsx")
+SETTING_PATH = abstractPath("../user_setting.cfg")
+EXCEL_TEMPLATE_PATH = abstractPath("template/template.xlsx")
 DEFAULT_SETTING = {
     "faculty": "自然科学研究科数理物質専攻",
     "studentID": "",
     "userName": "",
     "roomNumber": "",
-    "excelFileLocation": "user_setting.cfg",
+    "excelFileLocation": "",
 }
 
 
@@ -44,10 +44,10 @@ class UserSetting:
 
     def save_to_json(self, dst: Path):
         with open(dst, "w") as f:
-            jsondump(self.asdict(), f)
+            jsondump(asdict(self), f)
 
     @staticmethod
-    def load_from_json(dst: Path = Path("")):
+    def load_from_json(dst: Path = SETTING_PATH):
         try:
             with open(dst, "r") as f:
                 userSettingDict = jsonload(f)
@@ -56,13 +56,13 @@ class UserSetting:
         except json.decoder.JSONDecodeError:
             dst.unlink()
             userSettingDict = DEFAULT_SETTING
-        except Exception as e:
-            print(1, e)
 
         try:
             userSetting = UserSetting(**userSettingDict)
-        except Exception as e:
-            print(2, e)
+        except TypeError:
+            dst.unlink()
+            userSettingDict = DEFAULT_SETTING
+            userSetting = UserSetting(**userSettingDict)
         return userSetting
 
 
@@ -70,16 +70,16 @@ class AttendanceRecord:
     @staticmethod
     def excelFileName():
         today = datetime.date.today()
-        userName = UserSetting().load_from_json().userName
+        userName = UserSetting.load_from_json().userName
         return f"研究活動状況表(R{today.year-2018}.{today.month})_{userName}.xlsx"
-    
+
     def excelPath(self):
         loc = UserSetting.load_from_json().excelFileLocation
         return Path(loc) / self.excelFileName()
 
     def newExcelFromTemplate(self) -> openpyxl.workbook:
         today = datetime.date.today()
-        workbook = openpyxl.load_workbook(EXCEL_TEMPLATE_FILE)
+        workbook = openpyxl.load_workbook(EXCEL_TEMPLATE_PATH)
         sheet = workbook.active
         sheet.title = f"{today.month}月"
         sheet["A2"] = f"令和{today.year-2018}年{today.month}月　研究活動状況表（学生用）"
@@ -137,13 +137,13 @@ class AttendanceRecord:
         sheet = self.getExcel().active
         dt_now = datetime.datetime.now()
         time = sheet[f"C{dt_now.day+15}"].value
-        return datetime.datetime.combine(dt_now.day(), time) if time else None
+        return datetime.datetime.combine(dt_now.date(), time) if time else None
 
     def today_exit_time(self):
         sheet = self.getExcel().active
         dt_now = datetime.datetime.now()
         time = sheet[f"E{dt_now.day+15}"].value
-        return datetime.datetime.combine(dt_now.day(), time) if time else None
+        return datetime.datetime.combine(dt_now.date(), time) if time else None
 
 
 class Mainwindow:
@@ -214,7 +214,7 @@ class Mainwindow:
 
 
 class SettingWindow:
-    def show_window(self, usersetting) -> tp.Type[UserSetting]:
+    def show_window(self, usersetting: tp.Type[UserSetting]) -> tp.Type[UserSetting]:
         text_size = (15, 1)
         text_pad = ((10, 10), (10, 10))
         button_size = (10, 1)
@@ -238,6 +238,10 @@ class SettingWindow:
                 sg.Input(usersetting.roomNumber, key="roomNumber"),
             ],
             [
+                sg.Text("エクセルファイルの場所", size=text_size, pad=text_pad),
+                sg.Input(usersetting.excelFileLocation, key="excelFileLocation"),
+            ],
+            [
                 sg.Button("OK", size=button_size, pad=button_pad),
                 sg.Button("キャンセル", size=button_size, pad=button_pad),
             ],
@@ -246,13 +250,13 @@ class SettingWindow:
         event, values = window.read()
         window.close()
         if event == sg.WINDOW_CLOSED or event == "キャンセル":
-            return usersetting
+            newUserSetting = usersetting
         if event == "OK":
-            self.save_usersetting(UserSetting(**values))
-        return UserSetting(**values)
+            newUserSetting = UserSetting(**values)
+        return newUserSetting
 
     def save_usersetting(self, usersetting):
-        with open(SETTING_FILE, "w") as f:
+        with open(SETTING_PATH, "w") as f:
             jsondump(usersetting.to_json(), f)
 
 
@@ -297,10 +301,10 @@ def main():
     mw = Mainwindow()
     sw = SettingWindow()
     manw = ManualWindow()
-    if not Path(SETTING_FILE).is_file():
+    if not Path(SETTING_PATH).is_file():
         usersetting = sw.show_window(UserSetting.load_from_json())
-        usersetting.save_to_json()
-    ar = AttendanceRecord(UserSetting.load_from_json())
+        usersetting.save_to_json(SETTING_PATH)
+    ar = AttendanceRecord()
 
     while True:
         event, values = mw.show_window()
@@ -323,20 +327,20 @@ def main():
             mw.time_update(ar.today_entry_time(), ar.today_exit_time())
         if event == "設定":
             usersetting = sw.show_window(UserSetting.load_from_json())
-            mw.update_user_data()
-            usersetting.save_to_json(SETTING_FILE)
+            usersetting.save_to_json(SETTING_PATH)
+            mw.update_user_data(UserSetting.load_from_json())
         if event == "Excelで開く":
             subprocess.Popen(
-                ["start", ar.excelFileName(usersetting.userName)], shell=True
+                ["start", ar.excelFileName(UserSetting.load_from_json().userName)],
+                shell=True,
             )
             break
         if event == "-TIMEOUT-":
             mw.update_entry_time(ar.today_entry_time())
             mw.update_exit_time(ar.today_exit_time())
             mw.time_update(ar.today_entry_time(), ar.today_exit_time())
-            mw.update_user_data(usersetting)
+            mw.update_user_data(UserSetting.load_from_json())
             continue
-        ar.save_record(usersetting)
 
     mw.window.close()
 
