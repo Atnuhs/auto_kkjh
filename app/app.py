@@ -15,7 +15,7 @@ import PySimpleGUI as sg
 
 def abstractPath(relativePath):
     if getattr(sys, "frozen", False):
-        basedir = Path(sys.excutable).parent
+        basedir = Path(sys.executable).parent
     else:
         basedir = Path(__file__).parent
     return Path(basedir) / relativePath

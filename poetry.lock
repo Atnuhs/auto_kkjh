@@ -16,7 +16,7 @@ python-versions = "*"
 
 [[package]]
 name = "black"
-version = "21.4b0"
+version = "21.4b2"
 description = "The uncompromising code formatter."
 category = "dev"
 optional = false
@@ -26,7 +26,7 @@ python-versions = ">=3.6.2"
 appdirs = "*"
 click = ">=7.1.2"
 mypy-extensions = ">=0.4.3"
-pathspec = ">=0.6,<1"
+pathspec = ">=0.8.1,<1"
 regex = ">=2020.1.8"
 toml = ">=0.10.1"
 
@@ -34,6 +34,14 @@ toml = ">=0.10.1"
 colorama = ["colorama (>=0.4.3)"]
 d = ["aiohttp (>=3.3.2)", "aiohttp-cors"]
 python2 = ["typed-ast (>=1.4.2)"]
+
+[[package]]
+name = "cachetools"
+version = "4.2.2"
+description = "Extensible memoizing collections and decorators"
+category = "dev"
+optional = false
+python-versions = "~=3.5"
 
 [[package]]
 name = "click"
@@ -65,11 +73,11 @@ python-versions = "*"
 
 [[package]]
 name = "et-xmlfile"
-version = "1.0.1"
+version = "1.1.0"
 description = "An implementation of lxml.xmlfile for the standard library"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.6"
 
 [[package]]
 name = "flake8"
@@ -165,6 +173,18 @@ python-versions = "*"
 future = "*"
 
 [[package]]
+name = "py2exe"
+version = "0.10.4.0"
+description = "Build standalone executables for Windows"
+category = "dev"
+optional = false
+python-versions = ">=3.6, <3.10"
+
+[package.dependencies]
+cachetools = "*"
+pefile = "*"
+
+[[package]]
 name = "pycodestyle"
 version = "2.7.0"
 description = "Python style guide checker"
@@ -209,7 +229,7 @@ python-versions = "*"
 
 [[package]]
 name = "pysimplegui"
-version = "4.39.1"
+version = "4.40.0"
 description = "Python GUIs for Humans. Launched in 2018. It's 2021 & PySimpleGUI is an ACTIVE & supported project. Super-simple to create custom GUI's. 300 Demo programs & Cookbook for rapid start. Extensive documentation. Main docs at www.PySimpleGUI.org. Your success is the focus. Examples using Machine Learning (GUI, OpenCV Integration), Rainmeter Style Desktop Widgets, Matplotlib + Pyplot, PIL support, add GUI to command line scripts, PDF & Image Viewers. Great for beginners & advanced GUI programmers"
 category = "main"
 optional = false
@@ -253,8 +273,8 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.9"
-content-hash = "ba5b8fe864a09695e6a97b464a0ab0bfed487ee3099ac2ce6ccecc1bd9f8b29d"
+python-versions = "^3.9,<3.10"
+content-hash = "3d170c4ac06beb68e46fafd06b00560aaf9801e1351b4f44a8685f8a814fd3ea"
 
 [metadata.files]
 altgraph = [
@@ -266,8 +286,12 @@ appdirs = [
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
 ]
 black = [
-    {file = "black-21.4b0-py3-none-any.whl", hash = "sha256:2db7040bbbbaa46247bfcc05c6efdebd7ebe50c1c3ca745ca6e0f6776438c96c"},
-    {file = "black-21.4b0.tar.gz", hash = "sha256:915d916c48646dbe8040d5265cff7111421a60a3dfe7f7e07273176a57c24a34"},
+    {file = "black-21.4b2-py3-none-any.whl", hash = "sha256:bff7067d8bc25eb21dcfdbc8c72f2baafd9ec6de4663241a52fb904b304d391f"},
+    {file = "black-21.4b2.tar.gz", hash = "sha256:fc9bcf3b482b05c1f35f6a882c079dc01b9c7795827532f4cc43c0ec88067bbc"},
+]
+cachetools = [
+    {file = "cachetools-4.2.2-py3-none-any.whl", hash = "sha256:2cc0b89715337ab6dbba85b5b50effe2b0c74e035d83ee8ed637cf52f12ae001"},
+    {file = "cachetools-4.2.2.tar.gz", hash = "sha256:61b5ed1e22a0924aed1d23b478f37e8d52549ff8a961de2909c69bf950020cff"},
 ]
 click = [
     {file = "click-7.1.2-py2.py3-none-any.whl", hash = "sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc"},
@@ -300,7 +324,8 @@ cx-logging = [
     {file = "cx_Logging-3.0.tar.gz", hash = "sha256:ba8a7465facf7b98d8f494030fb481a2e8aeee29dc191e10383bb54ed42bdb34"},
 ]
 et-xmlfile = [
-    {file = "et_xmlfile-1.0.1.tar.gz", hash = "sha256:614d9722d572f6246302c4491846d2c393c199cfa4edc9af593437691683335b"},
+    {file = "et_xmlfile-1.1.0-py3-none-any.whl", hash = "sha256:a2ba85d1d6a74ef63837eed693bcb89c3f752169b0e3e7ae5b16ca5e1b3deada"},
+    {file = "et_xmlfile-1.1.0.tar.gz", hash = "sha256:8eb9e2bc2f8c97e37a2dc85a09ecdcdec9d8a396530a6d5a33b30b9a92da0c5c"},
 ]
 flake8 = [
     {file = "flake8-3.9.1-py2.py3-none-any.whl", hash = "sha256:3b9f848952dddccf635be78098ca75010f073bfe14d2c6bda867154bea728d2a"},
@@ -336,6 +361,17 @@ pathspec = [
 pefile = [
     {file = "pefile-2019.4.18.tar.gz", hash = "sha256:a5d6e8305c6b210849b47a6174ddf9c452b2888340b8177874b862ba6c207645"},
 ]
+py2exe = [
+    {file = "py2exe-0.10.4.0-cp36-cp36m-win32.whl", hash = "sha256:176561903f26a7996a81f5b5558ac0d1d6e12c9b2817886b937c6f417a71f3c8"},
+    {file = "py2exe-0.10.4.0-cp36-cp36m-win_amd64.whl", hash = "sha256:635d5bddecbfb0c667a9f040c7910440fe3f92d73dfa8c4e2038bcc800fa18a5"},
+    {file = "py2exe-0.10.4.0-cp37-cp37m-win32.whl", hash = "sha256:95d6a30b3063c84570f6d462c718d1608abd65db78934deeb3eea052d94531c1"},
+    {file = "py2exe-0.10.4.0-cp37-cp37m-win_amd64.whl", hash = "sha256:c37b50d08e02e913da3e83c868c569fa6312e3e5b81da5f30777643a9d66ff5f"},
+    {file = "py2exe-0.10.4.0-cp38-cp38-win32.whl", hash = "sha256:3ccbee44671e8298db1bb6395f020c40800949403d21fea218174df96d7003bf"},
+    {file = "py2exe-0.10.4.0-cp38-cp38-win_amd64.whl", hash = "sha256:81d0779702f12b4f8b17b355fdb0aa5dc33bc38489ec0e47e8e37bdea3b4b005"},
+    {file = "py2exe-0.10.4.0-cp39-cp39-win32.whl", hash = "sha256:f80f27b73f9573f50a95f86982a2dc4d16bd78e7c6aa5c82a5f7449c3a67adcf"},
+    {file = "py2exe-0.10.4.0-cp39-cp39-win_amd64.whl", hash = "sha256:b2cf99f76cad1d31d4c0669d6c919f3c25edebbf4b02a22660013245bca749dc"},
+    {file = "py2exe-0.10.4.0.tar.gz", hash = "sha256:32f0593be8c3343c1b685274b5969c87b47a0a5a98f36ad8e4880a897df53e37"},
+]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},
     {file = "pycodestyle-2.7.0.tar.gz", hash = "sha256:c389c1d06bf7904078ca03399a4816f974a1d590090fecea0c63ec26ebaf1cef"},
@@ -352,8 +388,8 @@ pyinstaller-hooks-contrib = [
     {file = "pyinstaller_hooks_contrib-2021.1-py2.py3-none-any.whl", hash = "sha256:27558072021857d89524c42136feaa2ffe4f003f1bdf0278f9b24f6902c1759c"},
 ]
 pysimplegui = [
-    {file = "PySimpleGUI-4.39.1-py3-none-any.whl", hash = "sha256:f77762aa09e30e69081c13b0f23154015529fd2cad92dd6f04168d2002dce0ac"},
-    {file = "PySimpleGUI-4.39.1.tar.gz", hash = "sha256:f90beeaaabffc550c6e2517f0a05a0b8430539a21d2424c6af6c025d30cb1e27"},
+    {file = "PySimpleGUI-4.40.0-py3-none-any.whl", hash = "sha256:e0a08b64eda98d4cdbb4261be1c3a6be6c57478d4d22e0d86190814e69581609"},
+    {file = "PySimpleGUI-4.40.0.tar.gz", hash = "sha256:5813a05f0da0fac1b56ec289d105b51841cc97bea8aca12d0896011969bfbc09"},
 ]
 pywin32-ctypes = [
     {file = "pywin32-ctypes-0.2.0.tar.gz", hash = "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942"},

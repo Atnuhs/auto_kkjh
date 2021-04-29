@@ -7,8 +7,8 @@ if sys.platform == "win32":
     base = "Win32GUI"
 
 setup(
-    name="test",
+    name="auto_kkjh",
     version="0.1",
     description="My GUI application!",
-    executables=[Executable("test.py", base=base)],
+    executables=[Executable("../app.py", base=base)],
 )
