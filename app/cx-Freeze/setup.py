@@ -1,7 +1,11 @@
 import sys
 from cx_Freeze import setup, Executable
 
-build_exe_options = {"packages": [], "excludes": ["test"]}
+build_exe_options = {
+    "packages": [],
+    "excludes": ["test"],
+    "includes": ["../template/template.xlsx"],
+}
 base = None
 if sys.platform == "win32":
     base = "Win32GUI"
