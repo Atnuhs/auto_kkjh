@@ -42,6 +42,15 @@ class UserSetting:
     roomNumber: str
     excelFileLocation: str
 
+    def excelFileName(self):
+        today = datetime.date.today()
+        fileSuffix = f"(R{today.year-2018}.{today.month})_{self.userName}.xlsx"
+        return f"研究活動状況表{fileSuffix}"
+
+    def excelPath(self):
+        loc = self.excelFileLocation
+        return Path(loc) / self.excelFileName()
+
     def save_to_json(self, dst: Path):
         print(f"save setting {dst}")
         with open(dst, "w") as f:
@@ -73,14 +82,6 @@ class UserSetting:
 
 class AttendanceRecord:
     @staticmethod
-    def excelFileName(userName: str):
-        today = datetime.date.today()
-        return f"研究活動状況表(R{today.year-2018}.{today.month})_{userName}.xlsx"
-
-    def excelPath(self, userName: str):
-        loc = UserSetting.load_from_json().excelFileLocation
-        return Path(loc) / self.excelFileName(userName)
-
     def newExcelFromTemplate(self) -> openpyxl.workbook:
         print("Generate New excell from template")
         today = datetime.date.today()
@@ -97,28 +98,25 @@ class AttendanceRecord:
             sheet[cell].number_format = "m月d日"
         return workbook
 
-    def getExcel(self, userName: str) -> openpyxl.workbook:
+    def getExcel(self, excelPath: Path) -> openpyxl.workbook:
         print("Open excel")
-        target = self.excelPath(userName)
-        if target.is_file():
-            workbook = openpyxl.load_workbook(target)
-        else:
-            workbook = self.newExcelFromTemplate()
-        return workbook
+        if excelPath.is_file():
+            return openpyxl.load_workbook(excelPath)
+        return self.newExcelFromTemplate()
 
-    def saveExcel(self, workbook: openpyxl.workbook, userName: str):
+    def saveExcel(self, workbook: openpyxl.workbook, excelPath: Path):
         print("save excel")
-        workbook.save(self.excelPath(userName))
+        workbook.save(excelPath)
 
-    def stampRoomNumber(self, userName):
+    def stampRoomNumber(self, excelPath: Path):
         dt_now = datetime.datetime.now()
         cell = f"H{dt_now.day+15}"
         newVal = self.userSetting.roomNumber
         print(f"set roomNumber => cell: {cell} roomNumber: {newVal}")
-        workbook = self.getExcel(userName)
+        workbook = self.getExcel(excelPath)
         sheet = workbook.active
         sheet[cell] = newVal
-        self.saveExcel(workbook)
+        self.saveExcel(workbook, userName)
 
     def stampUserSetting(self, userSetting: tp.Type[UserSetting]):
         print(f"stamp faculty => {userSetting.faculty}")
@@ -129,7 +127,7 @@ class AttendanceRecord:
         sheet["G7"] = userSetting.faculty
         sheet["G8"] = userSetting.studentID
         sheet["G9"] = userSetting.userName
-        self.saveExcel(workbook)
+        self.saveExcel(workbook, userSetting)
 
     def stampEntryTime(self, userName: str):
         dt_now = datetime.datetime.now()
@@ -139,7 +137,7 @@ class AttendanceRecord:
         workbook = self.getExcel(userName)
         sheet = workbook.active
         sheet[cell] = val
-        self.saveExcel(workbook)
+        self.saveExcel(workbook, userName)
 
     def stampExitTime(self, userName: str):
         dt_now = datetime.datetime.now()
@@ -149,7 +147,7 @@ class AttendanceRecord:
         workbook = self.getExcel(userName)
         sheet = workbook.active
         sheet[cell] = val
-        self.saveExcel(workbook)
+        self.saveExcel(workbook, userName)
 
     def TodayEntryTime(self, userName: str):
         print("See today's entry time")
@@ -235,31 +233,35 @@ class Mainwindow:
 
 class SettingWindow:
     def show_window(self, usersetting: tp.Type[UserSetting]) -> tp.Type[UserSetting]:
-        text_size = (15, 1)
-        text_pad = ((10, 10), (10, 10))
+        def Line(string: str):
+            text_size = (15, 1)
+            text_pad = ((10, 10), (10, 10))
+            return sg.T(string, size=text_size, pad=text_pad)
+
         button_size = (10, 1)
         button_pad = ((20, 20), (10, 10))
         layout = [
-            [sg.Text("現在のユーザ情報", size=text_size, pad=text_pad)],
+            [Line("現在のユーザ情報")],
             [
-                sg.Text("学部・大学院", size=text_size, pad=text_pad),
-                sg.Input(usersetting.faculty, key="faculty"),
+                Line("学部・大学院"),
+                sg.I(usersetting.faculty, key="faculty"),
             ],
             [
-                sg.Text("学籍番号", size=text_size, pad=text_pad),
-                sg.Input(usersetting.studentID, key="studentID"),
+                Line("学籍番号"),
+                sg.I(usersetting.studentID, key="studentID"),
             ],
             [
-                sg.Text("名前", size=text_size, pad=text_pad),
-                sg.Input(usersetting.userName, key="userName"),
+                Line("名前"),
+                sg.I(usersetting.userName, key="userName"),
             ],
             [
-                sg.Text("部屋番号", size=text_size, pad=text_pad),
-                sg.Input(usersetting.roomNumber, key="roomNumber"),
+                Line("部屋番号"),
+                sg.I(usersetting.roomNumber, key="roomNumber"),
             ],
             [
-                sg.Text("エクセルファイルの場所", size=text_size, pad=text_pad),
-                sg.Input(usersetting.excelFileLocation, key="excelFileLocation"),
+                Line("エクセル出力先"),
+                sg.I(usersetting.excelFileLocation, key="excelFileLocation"),
+                sg.FolderBrowse("フォルダの参照", target="excelFileLocation"),
             ],
             [
                 sg.Button("OK", size=button_size, pad=button_pad),
