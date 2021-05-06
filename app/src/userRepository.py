@@ -1,4 +1,3 @@
-import json
 import sqlite3
 from typing import Union
 from src.user import User, UserName, StudentId, Faculty, RoomNumber, ExcelDir
